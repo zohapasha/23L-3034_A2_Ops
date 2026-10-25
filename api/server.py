@@ -2,13 +2,12 @@ import io
 import os
 import time
 
-import keras
-import tensorflow as tf
+import numpy as np
+from ai_edge_litert.interpreter import Interpreter
 from flask import Flask, jsonify, request
 from PIL import Image
 
-MODEL_PATH = os.getenv("MODEL_PATH", "champion.keras")
-IMG_SIZE = int(os.getenv("IMG_SIZE", 160))
+MODEL_FILE = os.getenv("MODEL_FILE", "champion.tflite")
 THRESHOLD = float(os.getenv("THRESHOLD", 0.5))
 MODEL_VERSION = os.getenv("MODEL_VERSION", "champion")
 API_KEY = os.getenv("API_KEY", "")
@@ -16,15 +15,38 @@ API_KEY = os.getenv("API_KEY", "")
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
-model = keras.models.load_model(MODEL_PATH)
-print(f"loaded {MODEL_PATH} (size={IMG_SIZE}, threshold={THRESHOLD})", flush=True)
+interpreter = Interpreter(model_path=MODEL_FILE)
+interpreter.allocate_tensors()
+input_info = interpreter.get_input_details()[0]
+output_info = interpreter.get_output_details()[0]
+IMG_SIZE = int(input_info["shape"][1])
+print(f"loaded {MODEL_FILE} (size={IMG_SIZE}, threshold={THRESHOLD})", flush=True)
+
+
+def resize_bilinear(img, size):
+    # same maths as tf.image.resize(method="bilinear") so it matches training
+    h, w = img.shape[:2]
+    ys = np.clip((np.arange(size) + 0.5) * h / size - 0.5, 0, h - 1)
+    xs = np.clip((np.arange(size) + 0.5) * w / size - 0.5, 0, w - 1)
+    y0, x0 = np.floor(ys).astype(int), np.floor(xs).astype(int)
+    y1, x1 = np.minimum(y0 + 1, h - 1), np.minimum(x0 + 1, w - 1)
+    wy, wx = (ys - y0)[:, None, None], (xs - x0)[None, :, None]
+    top = img[y0][:, x0] * (1 - wx) + img[y0][:, x1] * wx
+    bottom = img[y1][:, x0] * (1 - wx) + img[y1][:, x1] * wx
+    return top * (1 - wy) + bottom * wy
 
 
 def load_image(image_bytes, size):
-    img = tf.io.decode_image(image_bytes, channels=3, expand_animations=False)
-    img = tf.image.resize(img, (size, size))
-    img.set_shape((size, size, 3))
-    return img
+    with Image.open(io.BytesIO(image_bytes)) as img:
+        arr = np.asarray(img.convert("RGB"), dtype=np.float32)
+    return resize_bilinear(arr, size).astype(np.float32)
+
+
+def predict_p_ai(image_bytes):
+    x = load_image(image_bytes, IMG_SIZE)[None]
+    interpreter.set_tensor(input_info["index"], x)
+    interpreter.invoke()
+    return float(interpreter.get_tensor(output_info["index"])[0][0])
 
 
 @app.get("/")
@@ -49,7 +71,7 @@ def predict():
         return jsonify(error="not a valid image"), 422
 
     start = time.perf_counter()
-    p_ai = float(model(load_image(data, IMG_SIZE)[None], training=False).numpy()[0][0])
+    p_ai = predict_p_ai(data)
     is_ai = p_ai >= THRESHOLD
     return jsonify(
         label="AI-generated" if is_ai else "Real",
