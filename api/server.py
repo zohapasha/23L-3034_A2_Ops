@@ -7,7 +7,8 @@ from ai_edge_litert.interpreter import Interpreter
 from flask import Flask, jsonify, request
 from PIL import Image
 
-MODEL_FILE = os.getenv("MODEL_FILE", "champion.tflite")
+HERE = os.path.dirname(os.path.abspath(__file__))
+MODEL_FILE = os.getenv("MODEL_FILE", os.path.join(HERE, "champion.tflite"))
 THRESHOLD = float(os.getenv("THRESHOLD", 0.5))
 MODEL_VERSION = os.getenv("MODEL_VERSION", "champion")
 API_KEY = os.getenv("API_KEY", "")
