@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Error {{ status }} · VisionGuard{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="verdict error">Error {{ status }}</div>
+  <p class="big">{{ message }}</p>
+  <a class="button" href="{{ url_for('index') }}">Try another file</a>
+</section>
+{% endblock %}

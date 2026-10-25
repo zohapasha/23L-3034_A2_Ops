@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Result · VisionGuard{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="muted">File: <b>{{ filename }}</b> · record #{{ row_id }}</p>
+  <div class="verdict {{ 'ai' if r.label == 'AI-generated' else 'real' }}">{{ r.label }}</div>
+  <p class="big">Confidence: <b>{{ '%.1f' % (r.confidence * 100) }}%</b></p>
+  <div class="bar"><span style="width: {{ (r.p_ai * 100)|round(1) }}%"></span></div>
+  <p class="muted">p(AI) = {{ r.p_ai }} · threshold = {{ r.threshold }} · model = {{ r.model_version }} · inference = {{ mode }} · {{ r.latency_ms }} ms</p>
+  <div class="caveat">
+    <b>Note:</b> this is only a guess from a model trained on around a thousand images, so it can be wrong,
+    especially with edited photos, paintings, screenshots or very small images. Don't use it as proof that an image is fake.
+  </div>
+  <a class="button" href="{{ url_for('index') }}">Analyse another image</a>
+</section>
+{% endblock %}

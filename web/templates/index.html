@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h1>Is this image AI-generated or real?</h1>
+  <p class="muted">Upload a JPG, PNG or BMP image (max {{ '%g' % max_mb }} MB). The image is analysed in memory and never stored.</p>
+  <form action="{{ url_for('predict') }}" method="post" enctype="multipart/form-data">
+    <label class="drop">
+      <input type="file" name="image" accept=".jpg,.jpeg,.png,.bmp" required onchange="preview(this)">
+      <span id="hint">Click to choose an image</span>
+      <img id="thumb" alt="">
+    </label>
+    <button type="submit">Analyse image</button>
+  </form>
+</section>
+<script>
+function preview(input){
+  const f = input.files[0]; if(!f) return;
+  document.getElementById('hint').textContent = f.name;
+  const img = document.getElementById('thumb'); img.src = URL.createObjectURL(f); img.style.display='block';
+}
+</script>
+{% endblock %}

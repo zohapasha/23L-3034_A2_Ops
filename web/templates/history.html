@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}History · VisionGuard{% endblock %}
+{% block content %}
+<section class="card wide">
+  <h1>Prediction history</h1>
+  <p class="muted">Latest {{ rows|length }} requests from the database (newest first). Times are UTC.</p>
+  {% if rows %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>#</th><th>When (UTC)</th><th>File</th><th>Decision</th><th>Confidence</th><th>p(AI)</th><th>Threshold</th><th>Model</th><th>Mode</th><th>ms</th></tr></thead>
+    <tbody>
+    {% for p in rows %}
+      <tr>
+        <td>{{ p.id }}</td>
+        <td>{{ p.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        <td>{{ p.filename }}</td>
+        <td><span class="pill {{ 'ai' if p.label == 'AI-generated' else 'real' }}">{{ p.label }}</span></td>
+        <td>{{ '%.1f' % (p.confidence * 100) }}%</td>
+        <td>{{ p.p_ai }}</td>
+        <td>{{ p.threshold }}</td>
+        <td>{{ p.model_version }}</td>
+        <td>{{ p.mode }}</td>
+        <td>{{ p.latency_ms }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p>No predictions yet. <a href="{{ url_for('index') }}">Upload an image</a>.</p>
+  {% endif %}
+</section>
+{% endblock %}
